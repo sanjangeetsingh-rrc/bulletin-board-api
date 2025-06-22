@@ -27,7 +27,6 @@ def login(request):
         ]))}, status=status.HTTP_400_BAD_REQUEST)
 
     email = email.strip().lower()
-    password = password.strip()
 
     try:
         validate_email(email)
@@ -59,7 +58,7 @@ def login_renew(request):
     except:
         return Response({'error': 'Invalid refresh token'}, status=status.HTTP_400_BAD_REQUEST)
 
-    return Response({'token': str(refresh.access_token)}, status=status.HTTP_200_OK)
+    return Response({'access': str(refresh.access_token)}, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -77,7 +76,6 @@ def signup(request):
         ]))}, status=status.HTTP_400_BAD_REQUEST)
 
     email = email.strip().lower()
-    password = password.strip()
     otp = otp.strip()
 
     try:
@@ -122,9 +120,6 @@ def signup_verify(request):
     except ValidationError:
         return Response({'error': 'Invalid email'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if User.objects.filter(email=email).exists():
-        return Response({'error': 'User already exists'}, status=status.HTTP_400_BAD_REQUEST)
-
     otp = pyotp.TOTP(pyotp.random_base32()).now()
     redis_client.setex(f'auth:signup:{email}', 900, otp)
 
@@ -137,6 +132,43 @@ def signup_verify(request):
     except:
         redis_client.delete(f'auth:signup:{email}')
         return Response({}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response({}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password(request):
+    email = request.data.get('email')
+    otp = request.data.get('otp')
+    password = request.data.get('password')
+
+    if not email or not otp or not password:
+        return Response({'error': list(filter(lambda x: x is not None, [
+            'Email is required' if not email else None,
+            'OTP is required' if not otp else None,
+            'Password is required' if not password else None,
+        ]))}, status=status.HTTP_400_BAD_REQUEST)
+
+    email = email.strip().lower()
+    otp = otp.strip()
+
+    user = User.objects.filter(email=email).first()
+
+    if not user:
+        return Response({'error': 'User does not exist'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        validate_password(password)
+    except ValidationError as e:
+        return Response({'error': e.messages}, status=status.HTTP_400_BAD_REQUEST)
+
+    redis_key = f'auth:signup:{email}'
+    if not redis_client.exists(redis_key) or otp != redis_client.get(redis_key):
+        return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(password)
+    user.save()
+    redis_client.delete(redis_key)
 
     return Response({}, status=status.HTTP_200_OK)
 
