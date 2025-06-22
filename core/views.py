@@ -120,6 +120,11 @@ def signup_verify(request):
     except ValidationError:
         return Response({'error': 'Invalid email'}, status=status.HTTP_400_BAD_REQUEST)
 
+    redis_key = f'auth:signup:{email}'
+    if redis_client.exists(redis_key):
+        if redis_client.ttl(redis_key) > 780:
+            return Response({'error': 'Please wait for 2 minutes before requesting another OTP'}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
     otp = pyotp.TOTP(pyotp.random_base32()).now()
     redis_client.setex(f'auth:signup:{email}', 900, otp)
 
