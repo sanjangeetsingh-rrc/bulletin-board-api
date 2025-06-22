@@ -64,15 +64,17 @@ def login_renew(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def signup(request):
+    full_name = request.data.get('full_name')
     email = request.data.get('email')
     otp = request.data.get('otp')
     password = request.data.get('password')
 
-    if not email or not otp or not password:
+    if not email or not otp or not password or not full_name:
         return Response({'error': list(filter(lambda x: x is not None, [
             'Email is required' if not email else None,
             'OTP is required' if not otp else None,
             'Password is required' if not password else None,
+            'Full name is required' if not full_name else None,
         ]))}, status=status.HTTP_400_BAD_REQUEST)
 
     email = email.strip().lower()
@@ -95,7 +97,7 @@ def signup(request):
     if not redis_client.exists(redis_key) or otp != redis_client.get(redis_key):
         return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
 
-    user = User.objects.create_user(email=email, password=password)
+    user = User.objects.create_user(full_name=full_name, email=email, password=password)
     redis_client.delete(redis_key)
 
     refresh = RefreshToken.for_user(user)
