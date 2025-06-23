@@ -16,7 +16,7 @@ from django.conf import settings
 import pyotp
 from .permissions import IsGroupAdmin, IsGroupPostOwner, IsGroupPostViewer
 from .models import User, GroupModel, GroupMemberModel, PostModel
-from .serializers import UserSerializer, GroupSerializer, GroupAdminSerializer, PostSerializer
+from .serializers import UserSerializer, GroupSerializer, GroupAdminSerializer, PostSerializer, GroupMemberSerializer
 from .utils import redis_client
 
 
@@ -269,6 +269,50 @@ class GroupViewSet(viewsets.ModelViewSet):
         serializer = GroupSerializer(groups, many=True)
         return Response(serializer.data)
 
+    @action(methods=['get'], detail=False)
+    def list_members(self, request):
+        group = request.query_params.get('group')
+
+        if not group:
+            return Response({'detail': 'Group ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            group = GroupModel.objects.get(id=group)
+        except GroupModel.DoesNotExist:
+            return Response({'detail': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if group.admin != request.user:
+            return Response({'detail': 'You are not the admin of this group.'}, status=status.HTTP_403_FORBIDDEN)
+
+        members = GroupMemberModel.objects.filter(group=group).select_related('user')
+        serializer = UserSerializer([m.user for m in members], many=True)
+        return Response(serializer.data)
+
+    @action(methods=['post'], detail=False)
+    def ban_member(self, request):
+        group = request.data.get('group')
+        user = request.data.get('user')
+
+        if not group or not user:
+            return Response({'detail': 'Both group and user are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            group = GroupModel.objects.get(id=group)
+        except GroupModel.DoesNotExist:
+            return Response({'detail': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if group.admin != request.user:
+            return Response({'detail': 'You are not the admin of this group.'}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            member = GroupMemberModel.objects.get(group=group, user_id=user)
+        except GroupMemberModel.DoesNotExist:
+            return Response({'detail': 'User is not a member of this group.'}, status=status.HTTP_404_NOT_FOUND)
+
+        member.is_banned = True
+        member.save()
+        return Response({'detail': f'User {member.user.email} has been banned.'}, status=status.HTTP_200_OK)
+
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = PostModel.objects.all().order_by('-created_at')
@@ -308,3 +352,66 @@ class PostViewSet(viewsets.ModelViewSet):
         posts = PostModel.objects.filter(group=group).order_by('-created_at')
         serializer = self.get_serializer(posts, many=True)
         return Response(serializer.data)
+
+
+@api_view(['POST'])
+def join_group(request):
+    user = request.user
+    user_email = request.user.email
+    domain = user_email.split('@')[1]
+    group = request.data.get('group')
+
+    if not group:
+        return Response({'detail': 'Group ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        group = GroupModel.objects.get(id=group)
+    except GroupModel.DoesNotExist:
+        return Response({'detail': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if group.admin == user:
+        return Response({'detail': 'Group admin is already considered a member.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if user_email in group.blacklist or domain in group.blacklist:
+        return Response({'detail': 'You are blacklisted from this group.'}, status=status.HTTP_403_FORBIDDEN)
+
+    if group.whitelist != [] and not (user_email in group.whitelist or domain in group.whitelist):
+        return Response({'detail': 'You are not whitelisted for this group.'}, status=status.HTTP_403_FORBIDDEN)
+
+    existing = GroupMemberModel.objects.filter(group=group, user=user).first()
+    if existing:
+        if existing.is_banned:
+            return Response({'detail': 'You are banned from this group.'}, status=status.HTTP_403_FORBIDDEN)
+        return Response({'detail': 'You are already a member.'}, status=status.HTTP_200_OK)
+
+    GroupMemberModel.objects.create(group=group, user=user)
+    return Response({}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+def leave_group(request):
+    user = request.user
+    group = request.data.get('group')
+
+    if not group:
+        return Response({'detail': 'Group ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        group = GroupModel.objects.get(id=group)
+    except GroupModel.DoesNotExist:
+        return Response({'detail': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if group.admin == user:
+        return Response({'detail': 'Group admin cannot leave their own group.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        member = GroupMemberModel.objects.get(group=group, user=user)
+    except GroupMemberModel.DoesNotExist:
+        return Response({'detail': 'You are not a member of this group.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if member.is_banned:
+        return Response({'detail': 'Banned members cannot leave the group.'}, status=status.HTTP_403_FORBIDDEN)
+
+    member.delete()
+    return Response({}, status=status.HTTP_200_OK)
+
