@@ -32,7 +32,7 @@ POST http://localhost:8000/login/
 Content-Type: application/json
 
 {
-    "email": "sanjangeetsingh65@gmail.com",
+    "email": "sanjangeetsingh25@gmail.com",
     "password": "DragonHunter123"
 }
 
@@ -72,4 +72,51 @@ Content-Type: application/json
     "otp": "369644",
     "password": "DragonHunter123"
 }
+
+###
+
+GET http://localhost:8000/groups/?search=
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUwNjQ3MjYwLCJpYXQiOjE3NTA2MzY1NzcsImp0aSI6ImE0OWQ4ZjY5NGM3YjRkZGZhYmMzNjNhMzIzZmI2MGUwIiwidXNlcl9pZCI6Mn0.YooOH8Gdq1f_us-fWu73Bm4ihNSWbOCVZXhP66-y9yc
+
+###
+
+POST http://localhost:8000/groups/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUwNjQ3MjYwLCJpYXQiOjE3NTA2MzY1NzcsImp0aSI6ImE0OWQ4ZjY5NGM3YjRkZGZhYmMzNjNhMzIzZmI2MGUwIiwidXNlcl9pZCI6Mn0.YooOH8Gdq1f_us-fWu73Bm4ihNSWbOCVZXhP66-y9yc
+Content-Type: application/json
+
+{
+    "name": "Monoblade Technologies"
+}
+
+###
+
+PATCH http://localhost:8000/groups/1/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUwNjQ3OTQ2LCJpYXQiOjE3NTA2NDQzNDYsImp0aSI6IjU4NmFlYTFmZjdjYjQzOGU5ZDk5YmU2OTI5YjkyNDYwIiwidXNlcl9pZCI6M30.vlD4Dg7HQKPRmTlgnhPEBmZMkKBY4aMuwD55XyQWye8
+Content-Type: application/json
+
+{
+    "name": "Monoblade Studio"
+}
+
+###
+
+GET http://localhost:8000/groups/my/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUwNjUxMTQ5LCJpYXQiOjE3NTA2NDc1NDksImp0aSI6ImRlZTg2NGQyODgwMzRhOGFhZGM3ZTU3MWUzMzEyZjllIiwidXNlcl9pZCI6M30.Mjb1nJZdWek5yNebeJvkS58W4aSHVzMm_ZNVIL-tLcM
+
+###
+
+POST http://localhost:8000/posts/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUwNjUyNjg2LCJpYXQiOjE3NTA2NDkwODYsImp0aSI6ImZiZWMyODVmYjA0MTQ0MGRhNzg4ZWIwNDk1ZDc0ZGE2IiwidXNlcl9pZCI6M30.XPd2TwKN0bbwethin86zQ7EW4qPNEBd9zwY2DyUumEk
+
+{
+    "title": "Hello, World!",
+    "content": "Hello, World!",
+    "group": 1
+}
+
+###
+
+GET http://localhost:8000/posts/?search=12
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUwNjUyNjg2LCJpYXQiOjE3NTA2NDkwODYsImp0aSI6ImZiZWMyODVmYjA0MTQ0MGRhNzg4ZWIwNDk1ZDc0ZGE2IiwidXNlcl9pZCI6M30.XPd2TwKN0bbwethin86zQ7EW4qPNEBd9zwY2DyUumEk
 

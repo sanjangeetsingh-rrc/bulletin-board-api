@@ -1,8 +1,11 @@
 from rest_framework.decorators import api_view
+from rest_framework import viewsets
 from rest_framework.response import Response
+from rest_framework import filters
+from rest_framework.decorators import action
 from rest_framework import status
 from rest_framework.decorators import permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
 from django.contrib.auth import authenticate
@@ -11,8 +14,9 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.conf import settings
 import pyotp
-from .models import User
-from .serializers import UserSerializer
+from .permissions import IsGroupAdmin, IsGroupPostOwner, IsGroupPostViewer
+from .models import User, GroupModel, GroupMemberModel, PostModel
+from .serializers import UserSerializer, GroupSerializer, GroupAdminSerializer, PostSerializer
 from .utils import redis_client
 
 
@@ -225,3 +229,82 @@ def change_password(request):
 
     return Response({}, status=status.HTTP_200_OK)
 
+
+class GroupViewSet(viewsets.ModelViewSet):
+    queryset = GroupModel.objects.all()
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name']
+
+    def get_permissions(self):
+        if self.action in ['update', 'partial_update', 'destroy']:
+            permission_classes = [IsAuthenticated, IsGroupAdmin]
+        else:
+            permission_classes = [IsAuthenticated]
+
+        return [permission() for permission in permission_classes]
+
+    def get_serializer_class(self):
+        if self.action in ['update', 'partial_update', 'create']:
+            return GroupAdminSerializer
+        else:
+            return GroupSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(admin=self.request.user)
+
+    @action(methods=['get'], detail=False)
+    def my(self, request):
+        groups = GroupModel.objects.filter(admin=request.user)
+        serializer = self.get_serializer(groups, many=True)
+        return Response(serializer.data)
+
+    @action(methods=['get'], detail=False)
+    def joined(self, request):
+        member_group_ids = GroupMemberModel.objects.filter(
+            user=request.user
+        ).exclude(group__admin=request.user).values_list('group_id', flat=True)
+
+        groups = GroupModel.objects.filter(id__in=member_group_ids)
+
+        serializer = GroupSerializer(groups, many=True)
+        return Response(serializer.data)
+
+
+class PostViewSet(viewsets.ModelViewSet):
+    queryset = PostModel.objects.all().order_by('-created_at')
+    serializer_class = PostSerializer
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            permission_classes = [IsAuthenticated, IsGroupPostOwner]
+        elif self.action in ['retrieve', 'list']:
+            permission_classes = [IsAuthenticated, IsGroupPostViewer]
+        return [permission() for permission in permission_classes]
+
+    @action(methods=['get'], detail=False)
+    def group_posts(self, request):
+        user = request.user
+        group = request.query_params.get('group')
+
+        if not group:
+            return Response({'detail': 'Group ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            group_id = int(group)
+        except ValueError:
+            return Response({'detail': 'Invalid group id'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            group = GroupModel.objects.get(id=group_id)
+        except GroupModel.DoesNotExist:
+            return Response({'detail': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        is_admin = group.admin == user
+        is_member = GroupMemberModel.objects.filter(group=group, user=user, is_banned=False).exists()
+
+        if not (is_admin or is_member):
+            return Response({'detail': 'Not authorized to view posts of this group.'}, status=status.HTTP_403_FORBIDDEN)
+
+        posts = PostModel.objects.filter(group=group).order_by('-created_at')
+        serializer = self.get_serializer(posts, many=True)
+        return Response(serializer.data)
