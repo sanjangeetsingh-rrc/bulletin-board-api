@@ -25,11 +25,12 @@ class GroupAdminSerializer(serializers.ModelSerializer):
 
 
 class PostSerializer(serializers.ModelSerializer):
+    group_name = serializers.CharField(source='group.name', read_only=True)
 
     class Meta:
         model = PostModel
-        fields = ['id', 'title', 'content', 'group', 'created_at', 'updated_at']
-        read_only_fields = ['created_at', 'updated_at']
+        fields = ['id', 'title', 'content', 'group', 'group_name', 'created_at', 'updated_at']
+        read_only_fields = ['group_name', 'created_at', 'updated_at']
 
 
 class GroupMemberSerializer(serializers.ModelSerializer):
