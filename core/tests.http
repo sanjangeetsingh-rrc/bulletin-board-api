@@ -1,0 +1,75 @@
+POST http://localhost:8000/signup/
+Content-Type: application/json
+
+{
+    "email": "sanjangeetsingh65@gmail.com",
+    "password": "DragonHunter123",
+    "full_name": "Sam",
+    "otp": "369644"
+}
+
+###
+
+POST http://localhost:8000/signup/request-otp/
+Content-Type: application/json
+
+{
+    "email": "sanjangeetsingh65@gmail.com"
+}
+
+###
+
+POST http://localhost:8000/login/renew/
+Content-Type: application/json
+
+{
+    "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1MzIyODU3NywiaWF0IjoxNzUwNjM2NTc3LCJqdGkiOiI2NjY0MzcyMzg2MGU0Yjg5YmVkZWM1ZjRjOTlkMGU5NCIsInVzZXJfaWQiOjJ9.QlsaAz-CE93TJwTaKqmTLqsmBpRiC_N1moG3cAQ9mCA"
+}
+
+###
+
+POST http://localhost:8000/login/
+Content-Type: application/json
+
+{
+    "email": "sanjangeetsingh65@gmail.com",
+    "password": "DragonHunter123"
+}
+
+###
+
+GET http://localhost:8000/user/info/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUwNjQwMTc3LCJpYXQiOjE3NTA2MzY1NzcsImp0aSI6IjhiZjgwZmNmMTAyMzRmYWU4NTE2YzVkZmNlODZmNTZiIiwidXNlcl9pZCI6Mn0.ylsJzuEI5k2z8FjFqt8C6HxNzCx0-CE_axM441eE73E
+
+###
+
+POST http://localhost:8000/user/update/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUwNjQwMTc3LCJpYXQiOjE3NTA2MzY1NzcsImp0aSI6IjhiZjgwZmNmMTAyMzRmYWU4NTE2YzVkZmNlODZmNTZiIiwidXNlcl9pZCI6Mn0.ylsJzuEI5k2z8FjFqt8C6HxNzCx0-CE_axM441eE73E
+
+{
+    "full_name": "Sanjangeet Singh"
+}
+
+###
+
+POST http://localhost:8000/user/change-password/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUwNjQwMTc3LCJpYXQiOjE3NTA2MzY1NzcsImp0aSI6IjhiZjgwZmNmMTAyMzRmYWU4NTE2YzVkZmNlODZmNTZiIiwidXNlcl9pZCI6Mn0.ylsJzuEI5k2z8FjFqt8C6HxNzCx0-CE_axM441eE73E
+
+{
+    "old_password": "DragonHunter123",
+    "new_password": "KingSlayer285"
+}
+
+###
+
+POST http://localhost:8000/reset-password/
+Content-Type: application/json
+
+{
+    "email": "sanjangeetsingh65@gmail.com",
+    "otp": "369644",
+    "password": "DragonHunter123"
+}
+

@@ -9,8 +9,10 @@ from django.contrib.auth import authenticate
 from django.core.validators import validate_email
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.conf import settings
 import pyotp
 from .models import User
+from .serializers import UserSerializer
 from .utils import redis_client
 
 
@@ -135,6 +137,7 @@ def signup_verify(request):
             subject=f'OTP - {otp}',
             message=f'Your OTP code is {otp}. This code will expire in 15 minutes. If you did not request this, please ignore this email.',
             recipient_list=[email],
+            from_email=settings.DEFAULT_FROM_EMAIL,
         )
     except:
         redis_client.delete(f'auth:signup:{email}')
@@ -176,6 +179,49 @@ def reset_password(request):
     user.set_password(password)
     user.save()
     redis_client.delete(redis_key)
+
+    return Response({}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def user_info(request):
+    serializer = UserSerializer(request.user)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+def user_update(request):
+    serializer = UserSerializer(request.user, data=request.data, partial=True)
+
+    if serializer.is_valid():
+        serializer.save()
+        return Response({}, status=status.HTTP_200_OK)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+def change_password(request):
+    old_password = request.data.get("old_password")
+    new_password = request.data.get("new_password")
+
+    if not old_password or not new_password:
+        return Response({'error': list(filter(lambda x: x is not None, [
+            'Old password is required' if not old_password else None,
+            'New password is required' if not new_password else None,
+        ]))}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = request.user
+    if not user.check_password(old_password):
+        return Response({'error': 'Incorrect password'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        validate_password(new_password)
+    except ValidationError as e:
+        return Response({'error': e.messages}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(new_password)
+    user.save()
 
     return Response({}, status=status.HTTP_200_OK)
 
