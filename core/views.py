@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.mail import send_mail
 from django.contrib.auth import authenticate
 from django.core.validators import validate_email
@@ -234,6 +235,7 @@ class GroupViewSet(viewsets.ModelViewSet):
     queryset = GroupModel.objects.all()
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
+    parser_classes = [MultiPartParser, FormParser]
 
     def get_permissions(self):
         if self.action in ['update', 'partial_update', 'destroy']:
